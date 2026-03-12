@@ -15,7 +15,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Universal Icon Generator",
+  title: "Iconix",
   description: "Generate every app and web icon from a single upload.",
   icons: {
     icon: [

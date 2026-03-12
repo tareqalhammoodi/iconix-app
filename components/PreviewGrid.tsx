@@ -36,10 +36,20 @@ export default function PreviewGrid({ assets, selectedPlatforms, isGenerating }:
     );
   }
 
-  const grouped = selectedPlatforms.map((platform) => ({
-    platform,
-    assets: assets.filter((asset) => asset.platform === platform)
-  }));
+  const grouped = selectedPlatforms
+    .map((platform) => ({
+      platform,
+      assets: assets.filter((asset) => asset.platform === platform)
+    }))
+    .filter((group) => group.assets.length > 0);
+
+  if (grouped.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border bg-white/4 p-5 text-center text-xs text-muted">
+        Generate icons to preview the selected platforms.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

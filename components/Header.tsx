@@ -7,7 +7,7 @@ export default function Header() {
         <span className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-2xl bg-surface-strong">
           <Image
             src="/android-chrome-192x192.png"
-            alt="Universal Icon Generator"
+            alt="Iconix"
             width={36}
             height={36}
             className="h-8 w-8"

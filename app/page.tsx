@@ -127,7 +127,7 @@ export default function HomePage() {
             <div>
               <h2 className="text-base font-semibold text-white">Preview</h2>
               <p className="mt-1 text-xs text-muted">
-                Generate once. Download starts automatically.
+                After generating, download will start automatically.
               </p>
             </div>
             <div className="w-full sm:w-auto">

@@ -180,8 +180,8 @@ export function useIconGenerator() {
         }
 
         const manifest = {
-          name: "Universal Icon",
-          short_name: "Icon",
+          name: "Iconix - Icon Maker",
+          short_name: "Iconix",
           icons: [
             {
               src: "android-chrome-192x192.png",
@@ -211,7 +211,7 @@ export function useIconGenerator() {
         });
 
         const siteManifestBlob = new Blob(
-          [JSON.stringify({ name: "Universal Icon", short_name: "Icon" }, null, 2)],
+          [JSON.stringify({ name: "Iconix - Icon Maker", short_name: "Iconix" }, null, 2)],
           { type: "application/manifest+json" }
         );
         files.push({
