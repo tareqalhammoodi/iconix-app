@@ -10,6 +10,11 @@ interface UploadDropZoneProps {
   file?: File | null;
   previewUrl?: string | null;
   resolution?: { width: number; height: number } | null;
+  accept?: string;
+  allowedExtensions?: string[];
+  prompt?: string;
+  promptActive?: string;
+  hint?: string;
   onFileSelect: (file: File) => void;
   onClear: () => void;
 }
@@ -18,17 +23,25 @@ export default function UploadDropZone({
   file,
   previewUrl,
   resolution,
+  accept,
+  allowedExtensions,
+  prompt,
+  promptActive,
+  hint,
   onFileSelect,
   onClear
 }: UploadDropZoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const extensions = (allowedExtensions ?? [".png", ".svg"]).map((item) =>
+    item.toLowerCase()
+  );
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const next = files[0];
     if (!next.type.startsWith("image/")) return;
-    if (!next.name.toLowerCase().endsWith(".png") && !next.name.toLowerCase().endsWith(".svg")) {
+    if (!extensions.some((extension) => next.name.toLowerCase().endsWith(extension))) {
       return;
     }
     onFileSelect(next);
@@ -57,17 +70,19 @@ export default function UploadDropZone({
         ref={inputRef}
         type="file"
         className="hidden"
-        accept="image/png,image/svg+xml"
+        accept={accept ?? "image/png,image/svg+xml"}
         onChange={(event) => handleFiles(event.target.files)}
       />
 
       <div className="flex min-h-57.5 flex-col items-center justify-center gap-3 text-center">
         <div>
           <p className="text-sm font-semibold text-white">
-            {previewUrl ? "Upload another logo" : "Drag & drop PNG or SVG"}
+            {previewUrl
+              ? promptActive ?? "Upload another logo"
+              : prompt ?? "Drag & drop PNG or SVG"}
           </p>
           <p className="text-[11px] text-muted">
-            Recommended 1024×1024 with transparent background.
+            {hint ?? "Recommended 1024×1024 with transparent background."}
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-3">
