@@ -5,11 +5,12 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import IconGenerator from "@/features/IconGenerator";
 import PngToSvgConverter from "@/features/PngToSvgConverter";
+import ImageToWebpConverter from "@/features/ImageToWebpConverter";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/utils/cn";
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<"icons" | "vector">("icons");
+  const [activeTab, setActiveTab] = useState<"icons" | "vector" | "webp">("icons");
 
   return (
     <div className="min-h-screen px-5 pb-14 pt-8 md:px-10">
@@ -21,7 +22,8 @@ export default function HomePage() {
             {(
               [
                 { id: "icons", label: "Icon Generator", sub: "App + web packs" },
-                { id: "vector", label: "PNG to SVG", sub: "Vector tracing" }
+                { id: "vector", label: "PNG to SVG", sub: "Vector tracing" },
+                { id: "webp", label: "Image to WebP", sub: "Fast conversion" }
               ] as const
             ).map((tab) => {
               const isActive = activeTab === tab.id;
@@ -46,8 +48,10 @@ export default function HomePage() {
 
         {activeTab === "icons" ? (
           <IconGenerator />
-        ) : (
+        ) : activeTab === "vector" ? (
           <PngToSvgConverter />
+        ) : (
+          <ImageToWebpConverter />
         )}
 
         <Footer />
