@@ -3,44 +3,49 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { saveAs } from "file-saver";
+import ActionButton from "@/components/ActionButton";
 import { Card } from "@/components/ui/card";
 import UploadDropZone from "@/components/UploadDropZone";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useImagePreview } from "@/hooks/useImagePreview";
 import { rasterToSvg } from "@/utils/vectorize";
+
+type VectorSettings = {
+  threshold: number;
+  smoothing: number;
+  maxSize: number;
+  invert: boolean;
+};
+
+type SvgResult = {
+  markup: string;
+  width: number;
+  height: number;
+  paths: number;
+};
+
+const defaultSettings: VectorSettings = {
+  threshold: 160,
+  smoothing: 1.2,
+  maxSize: 768,
+  invert: false
+};
 
 export default function PngToSvgConverter() {
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [resolution, setResolution] = useState<{ width: number; height: number } | null>(null);
-  const [threshold, setThreshold] = useState(160);
-  const [smoothing, setSmoothing] = useState(1.2);
-  const [maxSize, setMaxSize] = useState(768);
-  const [invert, setInvert] = useState(false);
-  const [svg, setSvg] = useState<string | null>(null);
-  const [stats, setStats] = useState<{ width: number; height: number; paths: number } | null>(
-    null
-  );
+  const [settings, setSettings] = useState<VectorSettings>(defaultSettings);
+  const [result, setResult] = useState<SvgResult | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const runId = useRef(0);
+  const { previewUrl, resolution } = useImagePreview(file);
 
-  useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      setResolution(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-
-    const img = new Image();
-    img.onload = () => {
-      setResolution({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    img.src = url;
-
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  const updateSetting = useCallback(
+    <K extends keyof VectorSettings>(key: K, value: VectorSettings[K]) => {
+      setSettings((current) => ({ ...current, [key]: value }));
+    },
+    []
+  );
 
   const handleConvert = useCallback(async () => {
     if (!file) return;
@@ -48,62 +53,52 @@ export default function PngToSvgConverter() {
     setIsConverting(true);
     try {
       const result = await rasterToSvg(file, {
-        threshold,
-        smoothing,
-        maxSize,
-        invert,
+        threshold: settings.threshold,
+        smoothing: settings.smoothing,
+        maxSize: settings.maxSize,
+        invert: settings.invert,
         fill: "#0b0b0b"
       });
       if (runId.current !== currentRun) return;
-      setSvg(result.svg);
-      setStats({ width: result.width, height: result.height, paths: result.paths });
+      setResult({
+        markup: result.svg,
+        width: result.width,
+        height: result.height,
+        paths: result.paths
+      });
     } catch (error) {
       if (runId.current !== currentRun) return;
       console.error(error);
-      setSvg(null);
-      setStats(null);
+      setResult(null);
     } finally {
       if (runId.current === currentRun) {
         setIsConverting(false);
       }
     }
-  }, [file, threshold, smoothing, maxSize, invert]);
+  }, [file, settings]);
 
   useEffect(() => {
     if (!file) {
-      setSvg(null);
-      setStats(null);
+      setResult(null);
       return;
     }
     const timer = window.setTimeout(() => {
       void handleConvert();
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [file, threshold, smoothing, maxSize, invert, handleConvert]);
+  }, [file, settings, handleConvert]);
 
   const svgUrl = useMemo(() => {
-    if (!svg) return null;
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-  }, [svg]);
+    if (!result?.markup) return null;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(result.markup)}`;
+  }, [result]);
 
   const handleDownload = useCallback(() => {
-    if (!svg || !file) return;
+    if (!result?.markup || !file) return;
     const name = file.name.replace(/\.png$/i, "");
-    const blob = new Blob([svg], { type: "image/svg+xml" });
-    import("file-saver").then((module) => {
-      const saver =
-        "saveAs" in module && typeof module.saveAs === "function"
-          ? module.saveAs
-          : typeof module.default === "function"
-            ? module.default
-            : null;
-      if (saver) {
-        saver(blob, `${name}.svg`);
-      } else {
-        console.error("file-saver export missing saveAs function.");
-      }
-    });
-  }, [svg, file]);
+    const blob = new Blob([result.markup], { type: "image/svg+xml" });
+    saveAs(blob, `${name}.svg`);
+  }, [result, file]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -126,11 +121,11 @@ export default function PngToSvgConverter() {
                 hint="High contrast PNGs vectorize best."
                 onFileSelect={(selected) => {
                   setFile(selected);
+                  setResult(null);
                 }}
                 onClear={() => {
                   setFile(null);
-                  setSvg(null);
-                  setStats(null);
+                  setResult(null);
                 }}
               />
             </div>
@@ -148,14 +143,14 @@ export default function PngToSvgConverter() {
               <label className="grid gap-2 text-xs text-white">
                 <span className="flex items-center justify-between text-[11px] text-muted">
                   Threshold
-                  <span className="text-white">{threshold}</span>
+                  <span className="text-white">{settings.threshold}</span>
                 </span>
                 <input
                   type="range"
                   min={0}
                   max={255}
-                  value={threshold}
-                  onChange={(event) => setThreshold(Number(event.target.value))}
+                  value={settings.threshold}
+                  onChange={(event) => updateSetting("threshold", Number(event.target.value))}
                   className="h-2 w-full cursor-pointer accent-accent"
                 />
               </label>
@@ -163,15 +158,15 @@ export default function PngToSvgConverter() {
               <label className="grid gap-2 text-xs text-white">
                 <span className="flex items-center justify-between text-[11px] text-muted">
                   Smoothing
-                  <span className="text-white">{smoothing.toFixed(1)}</span>
+                  <span className="text-white">{settings.smoothing.toFixed(1)}</span>
                 </span>
                 <input
                   type="range"
                   min={0}
                   max={6}
                   step={0.2}
-                  value={smoothing}
-                  onChange={(event) => setSmoothing(Number(event.target.value))}
+                  value={settings.smoothing}
+                  onChange={(event) => updateSetting("smoothing", Number(event.target.value))}
                   className="h-2 w-full cursor-pointer accent-accent"
                 />
               </label>
@@ -179,22 +174,25 @@ export default function PngToSvgConverter() {
               <label className="grid gap-2 text-xs text-white">
                 <span className="flex items-center justify-between text-[11px] text-muted">
                   Trace Detail
-                  <span className="text-white">{maxSize}px</span>
+                  <span className="text-white">{settings.maxSize}px</span>
                 </span>
                 <input
                   type="range"
                   min={256}
                   max={1400}
                   step={64}
-                  value={maxSize}
-                  onChange={(event) => setMaxSize(Number(event.target.value))}
+                  value={settings.maxSize}
+                  onChange={(event) => updateSetting("maxSize", Number(event.target.value))}
                   className="h-2 w-full cursor-pointer accent-accent"
                 />
               </label>
 
               <label className="flex items-center justify-between rounded-2xl border border-border bg-white/4 px-4 py-2 text-xs text-white">
                 <span>Invert colors</span>
-                <Checkbox checked={invert} onCheckedChange={() => setInvert((value) => !value)} />
+                <Checkbox
+                  checked={settings.invert}
+                  onCheckedChange={() => updateSetting("invert", !settings.invert)}
+                />
               </label>
             </div>
           </div>
@@ -210,23 +208,23 @@ export default function PngToSvgConverter() {
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Button
+            <ActionButton
               variant="secondary"
               onClick={() => void handleConvert()}
               disabled={!file || isConverting}
+              isLoading={isConverting}
+              loadingLabel="Tracing..."
+              label="Re-Trace"
               size="lg"
-              className="w-full sm:min-w-[180px]"
-            >
-              {isConverting ? "Tracing..." : "Re-Trace"}
-            </Button>
-            <Button
+              className="sm:min-w-45"
+            />
+            <ActionButton
               onClick={handleDownload}
-              disabled={!svg || isConverting}
+              disabled={!result || isConverting}
+              label="Download SVG"
               size="lg"
-              className="w-full sm:min-w-[180px]"
-            >
-              Download SVG
-            </Button>
+              className="sm:min-w-45"
+            />
           </div>
         </div>
 
@@ -244,12 +242,16 @@ export default function PngToSvgConverter() {
                 Output Details
               </p>
               <div className="mt-2 grid gap-1 text-xs text-white">
-                <span>{stats ? `${stats.width}×${stats.height}` : "—"}</span>
-                <span>{stats ? `${stats.paths} path${stats.paths === 1 ? "" : "s"}` : "—"}</span>
+                <span>{result ? `${result.width}×${result.height}` : "—"}</span>
+                <span>
+                  {result ? `${result.paths} path${result.paths === 1 ? "" : "s"}` : "—"}
+                </span>
               </div>
             </div>
             <div className="rounded-xl border border-border bg-surface-strong px-3 py-2 text-[10px] text-muted">
-              {svg ? svg.slice(0, 240) + (svg.length > 240 ? "…" : "") : "SVG markup preview."}
+              {result?.markup
+                ? result.markup.slice(0, 240) + (result.markup.length > 240 ? "…" : "")
+                : "SVG markup preview."}
             </div>
             <p className="text-[11px] text-muted">
               Tip: Reduce smoothing to keep sharp corners. Increase threshold to capture light

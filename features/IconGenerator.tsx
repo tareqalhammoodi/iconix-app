@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import ActionButton from "@/components/ActionButton";
 import UploadDropZone from "@/components/UploadDropZone";
 import PlatformSelector from "@/components/PlatformSelector";
 import PreviewGrid from "@/components/PreviewGrid";
-import GenerateButton from "@/components/GenerateButton";
 import { Card } from "@/components/ui/card";
 import { useIconGenerator, type GeneratedAsset } from "@/hooks/useIconGenerator";
+import { useImagePreview } from "@/hooks/useImagePreview";
 import { type PlatformKey } from "@/lib/icon-presets";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -24,29 +25,10 @@ const defaultPlatforms: PlatformKey[] = [
 export default function IconGenerator() {
   const { generate } = useIconGenerator();
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [resolution, setResolution] = useState<{ width: number; height: number } | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<PlatformKey[]>(defaultPlatforms);
   const [assets, setAssets] = useState<GeneratedAsset[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      setResolution(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-
-    const img = new Image();
-    img.onload = () => {
-      setResolution({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    img.src = url;
-
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  const { previewUrl, resolution } = useImagePreview(file);
 
   const handleGenerate = async () => {
     if (!file || selectedPlatforms.length === 0) return;
@@ -126,10 +108,13 @@ export default function IconGenerator() {
             </p>
           </div>
           <div className="w-full sm:w-auto">
-            <GenerateButton
+            <ActionButton
               onClick={handleGenerate}
               disabled={!file || selectedPlatforms.length === 0}
               isLoading={isGenerating}
+              loadingLabel="Generating..."
+              label="Generate & Download"
+              size="lg"
             />
           </div>
         </div>
